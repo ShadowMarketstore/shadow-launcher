@@ -1,0 +1,47 @@
+{
+  "name": "shadow-launcher",
+  "version": "1.0.0",
+  "description": "SHADOW LAUNCHER - Utilitaire d'optimisation Windows pour Shadow Market",
+  "main": "main.js",
+  "author": "Shadow Market",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis portable",
+    "build:portable": "electron-builder --win portable",
+    "build:installer": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.shadowmarket.launcher",
+    "productName": "Shadow Launcher",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "!Shadow_Scripts/**"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "ShadowLauncher-Portable.exe"
+    }
+  }
+}
