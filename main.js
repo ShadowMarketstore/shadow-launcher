@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -36,12 +36,92 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
+// ---------------------------------------------------------------------
+// Surveillance intelligente du dossier Téléchargements Windows :
+// tout fichier "Shadow_*" (.bat/.cmd/.ps1/.reg direct, ou .zip contenant
+// ces fichiers) est automatiquement récupéré et rangé dans Shadow_Scripts,
+// sans action manuelle du client.
+// ---------------------------------------------------------------------
+const processedDownloads = new Set();
+
+function isShadowDownload(filename) {
+  if (!/^shadow_/i.test(filename)) return false;
+  const ext = path.extname(filename).toLowerCase();
+  return ext === '.zip' || SCRIPT_EXTS.includes(ext);
+}
+
+// Attend que le fichier ait fini de télécharger (taille stable dans le temps)
+// avant de le traiter, pour ne pas attraper un téléchargement en cours.
+function waitUntilStable(filePath, onStable) {
+  let lastSize = -1;
+  const check = () => {
+    fs.stat(filePath, (err, stats) => {
+      if (err) return; // fichier déplacé/supprimé entre-temps, on abandonne
+      if (stats.size > 0 && stats.size === lastSize) {
+        onStable();
+      } else {
+        lastSize = stats.size;
+        setTimeout(check, 700);
+      }
+    });
+  };
+  check();
+}
+
+function processDownloadedFile(filePath) {
+  const dir = getScriptsDir();
+  const filename = path.basename(filePath);
+  const ext = path.extname(filename).toLowerCase();
+
+  try {
+    if (ext === '.zip') {
+      const AdmZip = require('adm-zip');
+      const zip = new AdmZip(filePath);
+      zip.getEntries().forEach(entry => {
+        if (entry.isDirectory) return;
+        const entryExt = path.extname(entry.entryName).toLowerCase();
+        if (SCRIPT_EXTS.includes(entryExt) || IMAGE_EXTS.includes(entryExt)) {
+          zip.extractEntryTo(entry, dir, false, true);
+        }
+      });
+    } else if (SCRIPT_EXTS.includes(ext)) {
+      fs.copyFileSync(filePath, path.join(dir, filename));
+    } else {
+      return;
+    }
+
+    if (mainWindow) {
+      mainWindow.webContents.send('products-updated', { ok: true, file: filename });
+    }
+  } catch (err) {
+    if (mainWindow) {
+      mainWindow.webContents.send('products-updated', { ok: false, file: filename, message: err.message });
+    }
+  }
+}
+
+function startDownloadsWatcher() {
+  const downloadsDir = app.getPath('downloads');
+  if (!fs.existsSync(downloadsDir)) return;
+
+  fs.watch(downloadsDir, { persistent: true }, (eventType, filename) => {
+    if (!filename || !isShadowDownload(filename)) return;
+
+    const fullPath = path.join(downloadsDir, filename);
+    if (processedDownloads.has(fullPath) || !fs.existsSync(fullPath)) return;
+    processedDownloads.add(fullPath);
+
+    waitUntilStable(fullPath, () => processDownloadedFile(fullPath));
+  });
+}
+
 app.whenReady().then(() => {
   const dir = getScriptsDir();
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   createWindow();
+  startDownloadsWatcher();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -157,6 +237,18 @@ ipcMain.handle('execute-scripts', async (event, files) => {
 });
 
 // ---------------------------------------------------------------------
+// IPC : ouvrir le dossier Shadow_Scripts dans l'explorateur Windows
+// ---------------------------------------------------------------------
+ipcMain.handle('open-scripts-folder', async () => {
+  const dir = getScriptsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const errorMessage = await shell.openPath(dir);
+  return { ok: errorMessage === '', message: errorMessage || 'Dossier ouvert' };
+});
+
+// ---------------------------------------------------------------------
 // IPC : redémarrage système
 // ---------------------------------------------------------------------
 ipcMain.handle('restart-pc', async () => {
@@ -166,3 +258,4 @@ ipcMain.handle('restart-pc', async () => {
     child.on('spawn', () => resolve({ ok: true, message: 'Redémarrage lancé' }));
   });
 });
+
