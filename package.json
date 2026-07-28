@@ -8,9 +8,9 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis portable",
-    "build:portable": "electron-builder --win portable",
-    "build:installer": "electron-builder --win nsis"
+    "build": "electron-builder --win nsis portable --publish never",
+    "build:portable": "electron-builder --win portable --publish never",
+    "build:installer": "electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "electron": "^31.0.0",
