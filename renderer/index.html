@@ -6,9 +6,9 @@
     <title>SHADOW LAUNCHER</title>
     <style>
         :root {
-            --bg-color: #09090b;
-            --panel-bg: #121217;
-            --neon-purple: #b026ff;
+            --bg-color: #05040a;
+            --panel-bg: #0d0a17;
+            --neon-purple: #9d7fff;
             --neon-cyan: #00f3ff;
             --neon-green: #39ff14;
             --neon-red: #ff2a2a;
@@ -22,7 +22,7 @@
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
-            background-image: radial-gradient(circle at center, #1a1a24 0%, #09090b 100%);
+            background-image: radial-gradient(circle at center, #150f2a 0%, #05040a 100%);
             color: var(--text-main);
             display: flex;
             justify-content: center;
@@ -36,11 +36,11 @@
             height: 650px;
             background-color: var(--panel-bg);
             border-radius: 12px;
-            box-shadow: 0 0 30px rgba(176, 38, 255, 0.2), inset 0 0 10px rgba(0, 243, 255, 0.05);
+            box-shadow: 0 0 30px rgba(157, 127, 255, 0.2), inset 0 0 10px rgba(0, 243, 255, 0.05);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid rgba(176, 38, 255, 0.3);
+            border: 1px solid rgba(157, 127, 255, 0.3);
             position: relative;
         }
 
@@ -55,8 +55,33 @@
             text-transform: uppercase;
             color: #fff;
             text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px var(--neon-purple), 0 0 40px var(--neon-purple);
-            box-shadow: 0 5px 15px rgba(176, 38, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(157, 127, 255, 0.1);
         }
+
+        .toolbar {
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 25px 0;
+        }
+
+        .btn-folder {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(90deg, #16a34a, var(--neon-green));
+            color: #06210f;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(57,255,20,0.3);
+        }
+
+        .btn-folder svg { width: 14px; height: 14px; }
 
         .product-list {
             flex-grow: 1;
@@ -189,8 +214,8 @@
             padding: 25px;
             display: flex;
             flex-direction: column;
-            border-top: 1px solid rgba(176, 38, 255, 0.3);
-            box-shadow: 0 -5px 15px rgba(176, 38, 255, 0.05);
+            border-top: 1px solid rgba(157, 127, 255, 0.3);
+            box-shadow: 0 -5px 15px rgba(157, 127, 255, 0.05);
         }
 
         .action-buttons {
@@ -217,8 +242,14 @@
             flex-grow: 1;
             background: transparent;
             color: var(--neon-purple);
-            border: 2px solid var(--neon-purple);
-            box-shadow: 0 0 10px rgba(176, 38, 255, 0.3), inset 0 0 10px rgba(176, 38, 255, 0.1);
+            border: 2px solid var(--neon-red);
+            box-shadow: 0 0 10px rgba(255, 42, 42, 0.25);
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        .btn-primary.has-selection {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.25);
         }
 
         .btn-primary:hover { background: var(--neon-purple); color: #fff; box-shadow: 0 0 20px var(--neon-purple), inset 0 0 10px rgba(255,255,255,0.5); text-shadow: 0 0 5px #fff; }
@@ -229,9 +260,25 @@
             color: var(--neon-red);
             border: 2px solid var(--neon-red);
             box-shadow: 0 0 10px rgba(255, 42, 42, 0.2);
+            width: 56px;
+            flex-shrink: 0;
+            padding: 15px;
         }
 
         .btn-secondary:hover { background: var(--neon-red); color: #fff; box-shadow: 0 0 20px var(--neon-red); }
+
+        .btn-add {
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+            width: 56px;
+            flex-shrink: 0;
+            padding: 15px;
+            font-size: 22px;
+        }
+
+        .btn-add:hover { background: var(--neon-green); color: #06210f; box-shadow: 0 0 20px var(--neon-green); }
 
         #terminal-log {
             display: none;
@@ -248,6 +295,66 @@
             max-height: 120px;
             overflow-y: auto;
         }
+
+        .search-bar {
+            margin: 0 25px 15px;
+            position: relative;
+        }
+
+        .search-bar input {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(157, 127, 255, 0.25);
+            border-radius: 6px;
+            padding: 10px 14px 10px 36px;
+            font-size: 13px;
+            color: var(--text-main);
+            font-family: inherit;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .search-bar input::placeholder { color: var(--text-muted); }
+
+        .search-bar input:focus {
+            border-color: var(--neon-cyan);
+            background: rgba(0, 243, 255, 0.05);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .product-item {
+            opacity: 0;
+            animation: rowIn 0.3s ease forwards;
+        }
+
+        @keyframes rowIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .product-item { animation: none; opacity: 1; }
+        }
+
+        .brand-tag {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            opacity: 0.5;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
@@ -255,19 +362,27 @@
     <div class="launcher-window">
         <div class="header">SHADOW LAUNCHER</div>
 
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Rechercher un produit...">
+        </div>
+
         <div class="product-list" id="product-list-container">
             <div class="empty-state">Chargement du catalogue...</div>
         </div>
 
         <div class="footer">
             <div class="action-buttons">
+                <button class="btn btn-add" id="btn-folder" title="Ajouter des scripts achetés">+</button>
                 <button class="btn btn-primary" id="btn-launch">▶ LANCER L'OPTIMISATION</button>
-                <button class="btn btn-secondary" id="btn-restart">⏻ REDÉMARRER</button>
+                <button class="btn btn-secondary" id="btn-restart">⏻</button>
             </div>
             <div id="terminal-log">&gt; Initialisation du moteur Shadow...</div>
+            <div class="brand-tag">Shadow Market · v1.0.0</div>
         </div>
     </div>
 
     <script src="renderer.js"></script>
 </body>
 </html>
+
