@@ -140,8 +140,11 @@ ipcMain.handle('scan-products', async () => {
   if (!fs.existsSync(dir)) return [];
 
   const entries = fs.readdirSync(dir);
+  // Seuls les fichiers "Shadow_..." sont de vrais produits activables.
+  // Exclut les fichiers d'infrastructure comme ShadowEngine_Core.ps1
+  // (importé par les produits en interne, jamais destiné à être lancé seul).
   const scriptFiles = entries.filter(f =>
-    SCRIPT_EXTS.includes(path.extname(f).toLowerCase())
+    SCRIPT_EXTS.includes(path.extname(f).toLowerCase()) && /^shadow_/i.test(f)
   );
 
   const products = scriptFiles.map(scriptFile => {
