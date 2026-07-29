@@ -35,6 +35,21 @@ process.on('uncaughtException', (err) => {
   );
 });
 
+// Les sessions RDP/VM (bureaux à distance type AppOnFly, Windows 365...) ont
+// souvent un pilote graphique virtualisé ("Microsoft Remote Display Adapter")
+// qui fait planter les apps Electron/Chromium au démarrage. Désactiver
+// l'accélération matérielle est le contournement standard documenté par
+// Electron pour ce cas précis — sans impact visible sur une app aussi simple
+// que celle-ci, y compris sur un vrai PC avec une vraie carte graphique.
+app.disableHardwareAcceleration();
+
+app.on('render-process-gone', (event, webContents, details) => {
+  logFatalError('render-process-gone', new Error(JSON.stringify(details)));
+});
+app.on('child-process-gone', (event, details) => {
+  logFatalError('child-process-gone', new Error(JSON.stringify(details)));
+});
+
 // Dossier "Shadow_Scripts" : à côté de l'exe une fois packagé,
 // à côté de main.js en développement.
 function getScriptsDir() {
