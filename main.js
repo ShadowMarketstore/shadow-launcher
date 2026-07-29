@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -8,6 +8,32 @@ const SCRIPT_EXTS = ['.bat', '.cmd', '.ps1', '.reg'];
 const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
 
 let mainWindow;
+
+// ---------------------------------------------------------------------
+// Journal d'erreurs : un .exe packagé n'a pas de console visible, donc
+// toute erreur non capturée provoquait avant un plantage silencieux
+// (fenêtre qui s'ouvre puis se ferme sans rien expliquer). Désormais,
+// toute erreur fatale est écrite dans un fichier et affichée à l'écran
+// avant que l'app ne quitte, pour qu'on sache toujours ce qui s'est
+// passé.
+// ---------------------------------------------------------------------
+function logFatalError(context, err) {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'shadow-launcher-crash.log');
+    const line = `[${new Date().toISOString()}] ${context} : ${err && err.stack ? err.stack : err}\n`;
+    fs.appendFileSync(logPath, line);
+  } catch (writeErr) {
+    // Si même l'écriture du log échoue, on ne peut plus rien faire de plus.
+  }
+}
+
+process.on('uncaughtException', (err) => {
+  logFatalError('uncaughtException', err);
+  dialog.showErrorBox(
+    'Shadow Launcher — Erreur inattendue',
+    `Une erreur a empêché le launcher de continuer :\n\n${err.message}\n\nDétails enregistrés dans shadow-launcher-crash.log (dossier données de l'application).`
+  );
+});
 
 // Dossier "Shadow_Scripts" : à côté de l'exe une fois packagé,
 // à côté de main.js en développement.
@@ -104,28 +130,45 @@ function startDownloadsWatcher() {
   const downloadsDir = app.getPath('downloads');
   if (!fs.existsSync(downloadsDir)) return;
 
-  fs.watch(downloadsDir, { persistent: true }, (eventType, filename) => {
-    if (!filename || !isShadowDownload(filename)) return;
+  try {
+    fs.watch(downloadsDir, { persistent: true }, (eventType, filename) => {
+      if (!filename || !isShadowDownload(filename)) return;
 
-    const fullPath = path.join(downloadsDir, filename);
-    if (processedDownloads.has(fullPath) || !fs.existsSync(fullPath)) return;
-    processedDownloads.add(fullPath);
+      const fullPath = path.join(downloadsDir, filename);
+      if (processedDownloads.has(fullPath) || !fs.existsSync(fullPath)) return;
+      processedDownloads.add(fullPath);
 
-    waitUntilStable(fullPath, () => processDownloadedFile(fullPath));
-  });
+      waitUntilStable(fullPath, () => processDownloadedFile(fullPath));
+    });
+  } catch (err) {
+    // Certains environnements (lecteurs réseau, sessions distantes type RDP)
+    // ne supportent pas fs.watch. On désactive juste la surveillance auto
+    // plutôt que de faire planter tout le launcher — le bouton "+" reste
+    // disponible en secours pour ajouter des scripts manuellement.
+    logFatalError('startDownloadsWatcher (non-bloquant, surveillance désactivée)', err);
+  }
 }
 
 app.whenReady().then(() => {
-  const dir = getScriptsDir();
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  createWindow();
-  startDownloadsWatcher();
+  try {
+    const dir = getScriptsDir();
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    createWindow();
+    startDownloadsWatcher();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  } catch (err) {
+    logFatalError('app.whenReady', err);
+    dialog.showErrorBox(
+      'Shadow Launcher — Erreur au démarrage',
+      `Le launcher n'a pas pu démarrer correctement :\n\n${err.message}`
+    );
+    app.quit();
+  }
 });
 
 app.on('window-all-closed', () => {
