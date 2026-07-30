@@ -43,6 +43,13 @@ process.on('uncaughtException', (err) => {
 // que celle-ci, y compris sur un vrai PC avec une vraie carte graphique.
 app.disableHardwareAcceleration();
 
+// ⚠️ DIAGNOSTIC TEMPORAIRE UNIQUEMENT — À RETIRER avant toute distribution
+// aux clients. Désactive le sandbox Chromium pour isoler si le crash
+// (STATUS_BREAKPOINT 0x80000003) vient de l'initialisation du sandbox sur
+// l'environnement virtualisé AppOnFly. Ce flag réduit une protection de
+// sécurité réelle et ne doit jamais rester dans une version publiée.
+app.commandLine.appendSwitch('no-sandbox');
+
 app.on('render-process-gone', (event, webContents, details) => {
   logFatalError('render-process-gone', new Error(JSON.stringify(details)));
 });
