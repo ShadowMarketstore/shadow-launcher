@@ -65,7 +65,6 @@ function createWindow() {
     height: 700,
     resizable: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'renderer', 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
