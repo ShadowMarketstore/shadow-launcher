@@ -37,18 +37,17 @@ process.on('uncaughtException', (err) => {
 
 // Les sessions RDP/VM (bureaux à distance type AppOnFly, Windows 365...) ont
 // souvent un pilote graphique virtualisé ("Microsoft Remote Display Adapter")
-// qui fait planter les apps Electron/Chromium au démarrage. Désactiver
-// l'accélération matérielle est le contournement standard documenté par
-// Electron pour ce cas précis — sans impact visible sur une app aussi simple
-// que celle-ci, y compris sur un vrai PC avec une vraie carte graphique.
+// qui fait planter les apps Electron/Chromium au démarrage (crash GPU,
+// exception 0x80000003 / STATUS_BREAKPOINT constaté sur VM AppOnFly).
+// disableHardwareAcceleration() seul ne suffisait pas toujours : on ajoute
+// les switches Chromium en plus, qui coupent le GPU même pour le rendu
+// logiciel de secours. Sans impact visible sur une app aussi simple que
+// celle-ci, y compris sur un vrai PC avec une vraie carte graphique.
 app.disableHardwareAcceleration();
-
-// ⚠️ DIAGNOSTIC TEMPORAIRE UNIQUEMENT — À RETIRER avant toute distribution
-// aux clients. Désactive le sandbox Chromium pour isoler si le crash
-// (STATUS_BREAKPOINT 0x80000003) vient de l'initialisation du sandbox sur
-// l'environnement virtualisé AppOnFly. Ce flag réduit une protection de
-// sécurité réelle et ne doit jamais rester dans une version publiée.
-app.commandLine.appendSwitch('no-sandbox');
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-gpu-compositing');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
 
 app.on('render-process-gone', (event, webContents, details) => {
   logFatalError('render-process-gone', new Error(JSON.stringify(details)));
@@ -70,14 +69,29 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 700,
-    resizable: false,
+    minWidth: 700,
+    minHeight: 500,
+    resizable: true,
+    minimizable: true,
+    maximizable: true,
+    closable: true,
     autoHideMenuBar: true,
+    show: false, // évite un flash de fenêtre blanche : on affiche seulement au 'ready-to-show'
+    icon: path.join(__dirname, 'renderer', 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
     }
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    logFatalError('did-fail-load', new Error(`code=${errorCode} desc=${errorDescription}`));
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
@@ -325,4 +339,3 @@ ipcMain.handle('restart-pc', async () => {
     child.on('spawn', () => resolve({ ok: true, message: 'Redémarrage lancé' }));
   });
 });
-
