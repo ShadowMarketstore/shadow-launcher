@@ -1,6 +1,6 @@
 {
-  "name": "shadow-launcher",
-  "version": "1.0.0",
+  "name": "shadow-launcher-test-noadmin",
+  "version": "1.0.0-test",
   "description": "SHADOW LAUNCHER - Utilitaire d'optimisation Windows pour Shadow Market",
   "main": "main.js",
   "author": "Shadow Market",
@@ -35,7 +35,7 @@
         { "target": "nsis", "arch": ["x64"] },
         { "target": "portable", "arch": ["x64"] }
       ],
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
